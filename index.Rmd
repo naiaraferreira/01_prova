@@ -1,0 +1,438 @@
+---
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+    highlight: tango
+---
+
+
+![](https://raw.githubusercontent.com/icaro-freire/estat_2020.2/main/img/mont_cabe.png)
+
+## Informações Relevantes
+
+Usaremos algumas bases de dados reais para realização dessa prova.
+Por conta disso, o tempo de resolução será extendido, visto que algumas dessas bases possuem mais de 50 MB, o que pode ocasionar demora no _download_.
+
+As bases de dados serão retiradas de nosso repositório do GitHub e do _site_ 
+[brasil.io](brasil.io).
+
+Faça o _download_ dos seguintes conjuntos de dados:
+
+1. [Salário de Magistrados](https://drive.google.com/u/0/uc?id=1FCdmXKf35dTtmnZQ1XhQPl7sF1MxX7WV&export=download);
+2. [Cursos e notas de corte do PROUNI 2018](https://drive.google.com/u/0/uc?id=1lnqYHylEWT8cN6vPZ-NRR8KfFAPNq43r&export=download)
+3. [Peixes do Rio Madeira](https://github.com/icaro-freire/dados_csv/blob/main/dados/csv/peixes_rio_madeira.csv)
+
+O uso do _software_ `R` é suficiente, mas não necessário.
+Ou seja, você pode usar qualquer outro _software_ que estiver mais familiarizado, todavia, as dicas que serão dadas em algumas questões abaixo, serão voltadas para os usuários do `R`.
+
+---
+
+## Identificação
+
+**Aluno:**  Naiara Ferreira de Jesus
+
+**Data:**  (18/ 09/ 2021)
+
+---
+
+
+```{r setup, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(ggridges)
+```
+
+## Questões (Soluções)
+
+### I. Sobre o _dataset_ `peixes_rio_madeira.csv`
+
+**Questão 01.** Considerando a variável `ordem`, responda:
+
+   a. Faça uma distribuição de frequência da variável `ordem`, ordenando os valores numéricos de forma crescente.
+   b. Qual `ordem` de peixe foi a mais identificada? Quantas foram as observações?
+   c. Quantos não foram identificados na variável `ordem`?
+   d. Faça um gráfico de barras para representar a variável ordem, nesse *dataset*.
+
+
+
+### Solução
+
+### Carregando dataset
+```{r}
+dados_peixes <- read.csv("dados/peixes_rio_madeira.csv")
+```
+ 
+ **a)** Visualizando a frequência
+```{r}
+dados_peixes %>%
+  count(dados_peixes$ordem)
+```
+ **b)** A ordem mais identificada foi Characiformes,com 64356 observações.
+
+**c)** 17 Ordens não foram identificados.
+ 
+ **d)** Gráfico de barras para representar a variável ordem
+
+```{r}
+dados_peixes%>% 
+  count(ordem) %>% 
+  mutate(prop = n / sum(n)) %>% 
+  ggplot() +
+  aes(x = n, y = fct_reorder(ordem, n), fill = ordem) +
+  geom_col() +
+  scale_fill_viridis_d() +
+  labs(
+    title = "Quantidade das ordens dos peixes",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal()
+  
+```
+ 
+**Questão 02.** Dentre os peixes que foram coletados da bacia do "Rio Guaporé", após a seleção da `ordem` e do `peso_g`, bem como a eliminação dos elementos não identificados; deseja-se comparar qual das ordens é a mais **homogênea**, no que se refere ao seu peso. 
+Para isso, é necessário comparar a variabilidade do `peso_g` em relação à média. Se a média é igual em cada ordem, usamos o **desvio padrão**. 
+Todavia, se a média em cada ordem é diferente, precisamos padronizar essa medida; e, nesse caso, usamos o **coeficiente de variação** (cv), em porcentagem. 
+Quanto menor a porcentagem do `cv`, mais homogênea é a distribuição do `peso_g`.
+Define-se: $$\text{cv} = \frac{\text{desvio padrão}}{média}\cdot 100$$
+
+   a. Qual medida de variabilidade é mais adequada para essa situação?
+   b. Determine qual das ordens dos peixes da bacia do Rio Guaporé possui distribuição de peso mais homogênea.
+  
+### Solução
+calculando a média
+```{r}
+dados_peixes %>%
+  group_by(ordem)%>%
+  summarise(media_peso = mean(peso_g, na.rm = TRUE))
+```
+
+**a)** A medidade de variabilidade mais adequada é a medida do coeficiente de variação visto que as médias são distintas.
+
+**b)** A ordem que possui distribuição mais homogênea é a Clupeiformes, com o coeficiente de variação de  78.23765.
+
+calculando o coeficiente de variação
+```{r}
+dados_peixes %>%
+group_by(ordem) %>%
+  filter(bacia == "Rio GuaporÃ©") %>%
+  summarise(media_peso =
+    mean(peso_g,  na.rm = TRUE),
+    desvio_peso = sd(peso_g,  na.rm = TRUE),
+    cv = (desvio_peso/media_peso)*100)
+```
+  
+**Questão 03.** No que se refere à variável `sexo`, recodifique-a (coloque o nome como `sexo_recode`) para que você possa filtrar aspenas os sexos "Macho" e "Fêmea", depois responda:
+
+  a. Qual o aumento, em porcentagem, devemos dar à quantidade de machos para que possua a mesma quantidade referente às fêmeas?
+  
+  b. Selecione as variáveis `peso_g` e `sexo_recode`, dentre os peixes identificados por "Macho" e "Fêmea", qual o sexo do peixe com maior peso?
+  
+  c. Faça um gráfico que represente de forma adequada a quantidade de machos e fêmeas, facetando tal gráfico na variável `bacia`.
+
+### Solução
+
+Recodificando a variável
+```{r}
+dados_peixes <- dados_peixes %>% 
+  rename(sexo_recode = sexo)
+```
+
+ **a)** Um aumento de 68,62% para que fique com a mesma quantidade que as fêmeas.
+```{r}
+dados_peixes %>% 
+  count(sexo_recode)
+```
+
+**b)** Rodando o código temos que o  peixe com o maoir peso é fêmea,pesando 146,00g.
+
+```{r}
+dados_peixes %>%
+  select(sexo_recode,peso_g) %>%
+  filter(sexo_recode!= "NÃ£o coletado") %>%
+  arrange(desc(peso_g)
+)
+```
+
+
+**c)** Gráfico que representa a quantidade de peixes por bacia:
+
+```{r}
+
+dados_peixes %>% 
+  ggplot() +
+  aes(x = sexo_recode) +
+  geom_density(aes(fill = sexo_recode), alpha = 0.3) +
+  facet_grid(bacia~.) +
+  scale_fill_viridis_d()
+```
+
+
+**Questão 04.** Faça um gráfico de pontos relacionando o peso (em kilogramas) e o comprimento (em metros), destacando a curva que melhor se adequa aos pontos, colorindo segundo a variável `ordem`. Depois, facete-o por `bacia`. Para ajudar, complete adequadamente o código abaixo (considere a variável `dados_peixes`, o conjunto de dados em questão), substituindo o símbolo "❓❓"  pela  variável  conveniente.
+
+
+```{r, eval=FALSE}
+dados_peixe %>% 
+  select(ordem, peso_g, cp_cm) %>% 
+  ggplot() +
+  aes(x=️ ❓❓/1000, y = ❓❓/100) +
+  geom_point(aes(color = ❓❓), alpha = 0.5) +
+  facet_grid(❓❓~.) +
+  geom_smooth() 
+```
+
+a. A curva que se adapta aos pontos é (praticamente) a mesma em cada bacia?
+  b. Qual a sua interpretação para esse fato (dica: pesquise sobre a curva de "crescimento logístico" aplicada ao crescimento de população - no caso, de peixes)?
+
+### Solução
+
+rodadando o código
+```{r}
+dados_peixes %>% 
+  select(ordem, peso_g, cp_cm,bacia) %>% 
+  ggplot() +
+  aes(x= peso_g /1000, y = cp_cm/100) +
+  geom_point(aes(color = ordem), alpha = 0.5) +
+  facet_grid(bacia~.) +
+  geom_smooth() 
+  
+```
+
+**a)** Sim.
+
+**b)** Ela possui um crescimento asim rapído assim como o exponencial,porém chega um ponto que comeca a ter uma ocilação entre queda e aumento dos pesos devido ao ambiente que os peixes vivem.
+
+### II. Sobre o _dataset_ `contracheque.csv`
+
+**Questão 05.** Qual o maior rendimento líquido registrado nesse _dataset_?
+
+### Solução
+carregando dataset
+```{r}
+
+dados_contracheque <- read.csv("dados/contracheque.csv")
+```
+
+ Sumarizando os dados temos que o maior rendimento liquído é de $\text{R}\$72.676,724$.
+```{r}
+  summary(dados_contracheque$rendimento_liquido)
+```
+
+**Questão 06.** Sabendo-se que o teto constitucional do funcionalismo público é de $\text{R}\$ 39.293,32 $, determine quantos magistrados receberam acima desse valor.
+
+   a. Quantos magistrados ganharam acima de $\text{R}\$ 100.000,00$ ?
+   b. Qual `tribunal` possui maior variabilidade?
+
+### Solução
+ 8208 nagistrados receberam acima de $\text{R}\$39.293,32$ 
+```{r}
+dados_contracheque %>%
+  select(retencao_por_teto_constitucional)%>%
+ filter(retencao_por_teto_constitucional > 39.29332)%>%
+ count()
+```
+**a)** 8093 magistrados receberam acima de $\text{R}\$100.000,00$.
+  
+  
+```{r}
+dados_contracheque %>%
+  select(retencao_por_teto_constitucional)%>%
+ filter(retencao_por_teto_constitucional > 100.00000)%>%
+ count()
+```
+   
+
+**b)** O tribunal com maior variabilidade é o Tribunal de Justiça de São Paulo, pois tem o maior coeficiente de variação.
+
+```{r}
+dados_contracheque %>%
+group_by(tribunal)%>%
+  summarise(
+    media_retencao =
+    mean(retencao_por_teto_constitucional,  na.rm = TRUE),
+    desvio_rtptc = sd(retencao_por_teto_constitucional,  na.rm = TRUE),
+    cv = (desvio_rtptc/media_retencao)*100) %>%
+arrange(desc(cv))
+```
+
+
+### Sobre o _dataset_ `cursos_prouni.csv`
+
+**Questão 07.** Para responder essa questão, complete adequadamente o código abaixo, referente a construção de um *boxplot*  da varivável `nota_integral_ampla`, agrupadas pelo `turno` (estamos considerando a variável `dados_cursos`, como sendo o *dataset* `cursos_prouni.csv`).
+
+```{r, eval=FALSE}
+dados_cursos %>%
+  select(❓❓ , ❓❓) %>% 
+  drop_na() %>% 
+  ggplot() +
+  aes(x = ❓❓, y = ❓❓, fill = ❓❓) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(
+    title = "Comparação das notas por turno",
+    x = "",
+    y = ""
+  ) +
+  scale_fill_viridis_d() +
+  theme_minimal()
+```
+
+  a. Pelo gráfico, qual dos turnos possui a maior mediana das notas? Explique.
+  b. Qual a média e a mediana do turno identificado no item anterior?
+  c. Qual dos cinco turnos possui menor homegeneidade na nota integral ampla? Noturno
+  d. Faça um gráfico de densidade dessas notas, facetando-as nos turnos. Esse gráfico também serviria para comparar as notas por turno? Explique.
+
+
+### Solução
+```{r}
+dados_cursos <- read.csv("dados/cursos-prouni.csv")
+```
+
+**Gráfico**
+```{r}
+dados_cursos %>%
+  select(nota_integral_ampla, turno) %>% 
+  drop_na() %>% 
+  ggplot() +
+  aes(x = turno ,y = nota_integral_ampla, fill = turno) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(
+    title = "Comparação das notas por turno",
+    x = "",
+    y = ""
+  ) +
+  scale_fill_viridis_d() +
+  theme_minimal()
+```
+
+
+**a)** A maior mediana é a do turno integral, visto que contém uma maior concentração de notas altas, enquanto os outros turnos mesmo com algumas notas altas suas medianas não são alteradas por conta desses outliers,já que estão distante das notas da maioria.
+
+
+**b)**Sumarizando a media e mediana, temos que a média do turno integral é 663.1000, e a mediana é	de 657.50
+
+```{r}
+dados_cursos %>%
+group_by(turno) %>%
+  summarise(media_nota =
+    mean(nota_integral_ampla,na.rm=TRUE),
+mediana_nota = median(nota_integral_ampla,na.rm=TRUE)
+)
+```
+
+**c)**O curso que possui menor homogeneidade é o Curso a distância.
+```{r}
+dados_cursos %>%
+group_by(turno) %>%
+  summarise(media_nota =
+    mean(nota_integral_ampla,na.rm=TRUE),
+mediana_nota = median(nota_integral_ampla,na.rm=TRUE),
+desvio_nota = sd(nota_integral_ampla,na.rm = TRUE),
+cv = (desvio_nota/media_nota)*100
+)
+```
+
+**d)**Gráfico das notas
+
+```{r}
+dados_cursos %>% 
+  ggplot() +
+  aes(x = nota_integral_ampla) +
+  geom_density(aes(fill = turno), alpha = 0.3) +
+  facet_grid(turno~.) +
+  scale_fill_viridis_d()
+```
+
+ Sim.Pois ela nos dá uma visualização bem coerente com as médias e medianas obtidas anteriormente,comfirmando assim que a densidade das distribuições das notas do curso a distância são inferiores do que as médias dos outros turnos, vemos também que o curso integral tem notas acima da média dos outros turnos, além de vizualizar como os turnos matutino, noturno e vespertino tem distribuição bastante simétricas em relação as suas médias e medianas. 
+
+**Questão 08.** Qual a posição ocupa o estado da Bahia, no que se refere à frequência absoluta da variável `uf_busca`, disposta de forma decrescente? 
+
+### Solução
+ Disposta de foma decrescente o estado da Bahia fica a 5° posição.
+```{r}
+dados_cursos %>%
+  group_by(uf_busca)%>%
+  arrange(desc(uf_busca))%>%
+count()
+```
+
+
+**Questão 09.** Quantos cursos foram identificados, distintamente, na variável `nome`?
+
+### Solução
+
+ Foram identificado 296 cursos diferentes.
+```{r}
+dados_cursos %>%  
+  count(nome)
+```
+
+**Questão 10.** Analise o código abaixo e execute-o (estamos considerando a variável `dados_curso` como sendo o *dataset* `cursos_prouni.csv`). O que você pode concluir com respeito aos cursos exibidos, comparativamente? (cite, pelo menos, duas características gráficas).
+
+```{r,eval=FALSE}
+dados_curso %>% 
+  select(nome, nota_integral_ampla) %>%
+  drop_na() %>% 
+  filter(nome == "Medicina" | nome == "Direito") %>% 
+  ggplot() +
+  aes(nota_integral_ampla, nome, fill = nome) +
+  geom_density_ridges(show.legend = FALSE) +
+  scale_fill_viridis_d() +
+  labs(
+    title = "Comparação entre Medicina e Direito",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal()
+```
+
+### Solução
+
+Rodadando o código
+
+```{r}
+dados_cursos %>% 
+  select(nome, nota_integral_ampla) %>%
+  drop_na() %>% 
+  filter(nome == "Medicina" | nome == "Direito") %>% 
+  ggplot() +
+  aes(nota_integral_ampla, nome, fill = nome) +
+  geom_density_ridges(show.legend = FALSE) +
+  scale_fill_viridis_d() +
+  labs(
+    title = "Comparação entre Medicina e Direito",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal()
+```
+
+ As notas dos alunos de  Medicina possui um agrupamento maior ficando assim com as notas próximas da média e mediana. No curso de Direito as notas estão mais distribuídas em relação as notas de Medicina.
+
+
+
+
+## Dicas
+
+- Organize seu ambiente de trabalho com um Projeto em R;
+- Carrege os conjuntos de dados separadamente, pois se a memória do seu computador for pequena, pode causar lentidão;
+  + Por exemplo, leia o conjunto de dados `contracheque.csv`, resolva as questões referente a esse tópico e depois, no console, digite `rm(list = ls())`. Aí é só carregar um outro conjunto de dados.
+  + O comando `rm(list = ls())` limpa a memória armazenada até aquele momento pelas variáveis no `R`.
+
+
+---
+```{r, eval=FALSE}
+                                         |//
+                                        (o o)
+                    +-------------oOO----(_)-----oOO-----------------+
+                    | ______              ______                     |
+                    | | ___ \             | ___ \                    |
+                    | | |_/ / ___   __ _  | |_/ / __ _____   ____ _  |
+                    | | ___ \/ _ \ / _` | |  __/ '__/ _ \ \ / / _` | |
+                    | | |_/ / (_) | (_| | | |  | | | (_) \ V / (_| | |
+                    | \____/ \___/ \__,_| \_|  |_|  \___/ \_/ \__,_| |
+                    |                                                |
+                    +------------------------------------------------+
+                                       |__|__|
+                                        || ||
+                                       ooO Ooo
+```
